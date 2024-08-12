@@ -1,0 +1,31 @@
+# BASIC INFORMATION
+name: "mdx-embeddings-actions"
+description: "Generate embeddings from your Knowledge Base to use with Vercel Postgres."
+author: "PieterDePauw"
+
+# GITHUB BRANDING
+branding:
+  icon: "heart"
+  color: "red"
+
+# INPUT VALUES
+inputs:
+  DATABASE_URL:
+    required: true
+    description: "Your Vercel Postgres database URL"
+  OPENAI_KEY:
+    required: true
+    description: "Your OpenAI API key"
+  DOCS_ROOT_PATH:
+    required: true
+    description: "The path to the root of your knowledge base or docs folder"
+    default: "docs"
+
+# RUNTIME CONFIGURATION
+runs:
+  using: node20
+  main: dist/index.js
+# OUTPUT VALUES
+# outputs:
+#   time:
+#     description: 'Your output description here'

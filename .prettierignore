@@ -1,0 +1,7 @@
+dist/
+lib/
+node_modules/
+src/db/migrations/
+.github/
+package-lock.json
+pnpm-lock.yaml
