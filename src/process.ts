@@ -1,7 +1,7 @@
+import pg from "pg"
 import { Configuration, OpenAIApi } from "openai"
 import { randomUUID } from "crypto"
 import { inspect } from "util"
-import { Pool } from "pg"
 import { eq, ne } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { pages, pageSections, type InsertPageSection, type InsertPage } from "./db/schema"
@@ -17,6 +17,7 @@ const defaultDocsRootPath = "./docs"
 // Generate embeddings for all pages
 export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, docsRootPath = defaultDocsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
 	// Connect to the database
+	const { Pool } = pg
 	const pool = new Pool({ connectionString: databaseUrl })
 	const db = drizzle(pool)
 
