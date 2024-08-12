@@ -48447,6 +48447,8 @@ function arrayOverlaps(column, values) {
 }
 
 //# sourceMappingURL=conditions.js.map
+// EXTERNAL MODULE: ./node_modules/.pnpm/dotenv@16.4.5/node_modules/dotenv/lib/main.js
+var main = __nccwpck_require__(2288);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/@neondatabase+serverless@0.9.4/node_modules/@neondatabase/serverless/index.mjs
 var eo=Object.create;var Ie=Object.defineProperty;var to=Object.getOwnPropertyDescriptor;var ro=Object.getOwnPropertyNames;var no=Object.getPrototypeOf,io=Object.prototype.hasOwnProperty;var so=(r,e,t)=>e in r?Ie(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):
 r[e]=t;var a=(r,e)=>Ie(r,"name",{value:e,configurable:!0});var z=(r,e)=>()=>(r&&(e=r(r=0)),e);var T=(r,e)=>()=>(e||r((e={exports:{}}).exports,e),e.exports),ie=(r,e)=>{for(var t in e)
@@ -54907,15 +54909,13 @@ function drizzle(client, config = {}) {
 }
 
 //# sourceMappingURL=driver.js.map
-// EXTERNAL MODULE: ./node_modules/.pnpm/dotenv@16.4.5/node_modules/dotenv/lib/main.js
-var main = __nccwpck_require__(2288);
 ;// CONCATENATED MODULE: ./src/db/index.ts
 // Import modules
 
 
 
 // // Read the environment variables
-(0,main.config)({ path: ".env" });
+main.config({ path: ".env" });
 // Connect to Vercel Postgres
 const db_db = drizzle(chunk_WDBQYBZQ_sql);
 
@@ -82726,8 +82726,10 @@ var main_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arg
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+// Import modules
 
 
+// Define the function 'run'
 function run() {
     return main_awaiter(this, void 0, void 0, function* () {
         try {
@@ -82739,15 +82741,13 @@ function run() {
             yield generateEmbeddings({ shouldRefresh: false, openaiApiKey: OPENAI_KEY, docsRootPath: DOCS_ROOT_PATH });
         }
         catch (error) {
-            if (error instanceof Error) {
+            if (error instanceof Error)
                 core.setFailed(error.message);
-            }
-            else {
-                console.error(error);
-            }
         }
     });
 }
+// Run the function 'run' and log any errors
+run();
 
 })();
 
