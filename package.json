@@ -71,34 +71,5 @@
 		"ts-jest": "^29.1.1",
 		"typescript": "^5.2.2",
 		"tsx": "^3.14.0"
-	},
-	"jest": {
-		"preset": "ts-jest",
-		"verbose": true,
-		"clearMocks": true,
-		"testEnvironment": "node",
-		"moduleFileExtensions": [
-			"js",
-			"ts"
-		],
-		"testMatch": [
-			"**/*.test.ts"
-		],
-		"testPathIgnorePatterns": [
-			"/node_modules/",
-			"/dist/"
-		],
-		"transform": {
-			"^.+\\.ts$": "ts-jest"
-		},
-		"coverageReporters": [
-			"json-summary",
-			"text",
-			"lcov"
-		],
-		"collectCoverage": true,
-		"collectCoverageFrom": [
-			"./src/**"
-		]
 	}
 }
