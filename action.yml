@@ -29,9 +29,5 @@ inputs:
 
 # RUNTIME CONFIGURATION
 runs:
-  using: node22
-  main: dist/index.js
-# OUTPUT VALUES
-# outputs:
-#   time:
-#     description: 'Your output description here'
+  using: "node20"
+  main: "dist/index.js"
