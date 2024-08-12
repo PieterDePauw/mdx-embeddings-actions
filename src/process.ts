@@ -12,9 +12,10 @@ import { type GenerateEmbeddingsProps, type SourceData } from "./lib/types"
 // Constants
 const embeddingsModel = "text-embedding-ada-002"
 const ignoredFiles = ["pages/404.mdx"]
+const defaultDocsRootPath = "./docs"
 
 // Generate embeddings for all pages
-export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, docsRootPath = "/docs", databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
+export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, docsRootPath = defaultDocsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
 	// Connect to the database
 	const pool = new Pool({ connectionString: databaseUrl })
 	const db = drizzle(pool)
