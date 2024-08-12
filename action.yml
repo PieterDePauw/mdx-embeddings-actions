@@ -11,7 +11,7 @@ branding:
 # ENVIRONMENTAL VALUES
 env:
   DATABASE_URL: ${{ secrets.DATABASE_URL }}
-  OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   DOCS_ROOT_PATH: ${{ secrets.DOCS_ROOT_PATH }}
 
 # INPUT VALUES
@@ -19,7 +19,7 @@ inputs:
   DATABASE_URL:
     required: true
     description: "Your Vercel Postgres database URL"
-  OPENAI_KEY:
+  OPENAI_API_KEY:
     required: true
     description: "Your OpenAI API key"
   DOCS_ROOT_PATH:

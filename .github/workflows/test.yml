@@ -1,10 +1,10 @@
-name: 'build-test'
+name: "build-test"
 on: # rebuild any PRs and main branch changes
   pull_request:
   push:
     branches:
       - main
-      - 'releases/*'
+      - "releases/*"
 
 jobs:
   build: # make sure build/ci work properly
@@ -21,7 +21,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./
         with:
-          supabase-url: 'https://nihypcognmeejjrivnde.supabase.co'
-          supabase-service-role-key: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          openai-key: ${{ secrets.OPENAI_KEY }}
-          docs-root-path: 'docs'
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DOCS_ROOT_PATH: "docs"

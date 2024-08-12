@@ -26,11 +26,11 @@ jobs:
         with:
           supabase-url: 'https://your-project-ref.supabase.co'
           supabase-service-role-key: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          openai-key: ${{ secrets.OPENAI_KEY }}
+          openai-key: ${{ secrets.OPENAI_API_KEY }}
           docs-root-path: 'docs' # the path to the root of your md(x) files
 ```
 
-Make sure to set `SUPABASE_SERVICE_ROLE_KEY`, and `OPENAI_KEY` as repository secrets in your repo settings (settings > secrets > actions).
+Make sure to set `SUPABASE_SERVICE_ROLE_KEY`, and `OPENAI_API_KEY` as repository secrets in your repo settings (settings > secrets > actions).
 
 See the instructions in the [`headless-vector-search`](https://github.com/supabase/headless-vector-search) for more information on how to query your database from your website.
 

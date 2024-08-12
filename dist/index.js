@@ -82734,11 +82734,11 @@ function run() {
     return main_awaiter(this, void 0, void 0, function* () {
         try {
             // Get the inputs
-            const OPENAI_KEY = core.getInput("OPENAI_KEY");
+            const OPENAI_API_KEY = core.getInput("OPENAI_API_KEY");
             const DOCS_ROOT_PATH = core.getInput("DOCS_ROOT_PATH");
             // const DATABASE_URL = core.getInput("DATABASE_URL")
             // Generate the embeddings
-            yield generateEmbeddings({ shouldRefresh: false, openaiApiKey: OPENAI_KEY, docsRootPath: DOCS_ROOT_PATH });
+            yield generateEmbeddings({ shouldRefresh: false, openaiApiKey: OPENAI_API_KEY, docsRootPath: DOCS_ROOT_PATH });
         }
         catch (error) {
             if (error instanceof Error)
