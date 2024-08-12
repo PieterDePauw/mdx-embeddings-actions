@@ -2,6 +2,12 @@
 	"name": "mdx-embeddings-actions",
 	"version": "0.0.4",
 	"private": true,
+	"author": "PieterDePauw",
+	"keywords": [
+		"actions",
+		"node",
+		"setup"
+	],
 	"description": "A GitHub Action that converts your markdown files into embeddings and stores them in your Postgres database, allowing you to perform vector similarity search inside your documentation and website.",
 	"main": "src/main.ts",
 	"scripts": {
@@ -24,12 +30,6 @@
 		"db:check": "drizzle-kit check",
 		"db:up": "drizzle-kit up"
 	},
-	"keywords": [
-		"actions",
-		"node",
-		"setup"
-	],
-	"author": "PieterDePauw",
 	"dependencies": {
 		"@actions/core": "^1.10.1",
 		"@supabase/supabase-js": "^2.38.4",
