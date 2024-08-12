@@ -1,6 +1,8 @@
+// Import modules
 import * as core from "@actions/core"
 import { generateEmbeddings } from "./process"
 
+// Define the function 'run'
 export async function run(): Promise<void> {
 	try {
 		// Get the inputs
@@ -11,10 +13,9 @@ export async function run(): Promise<void> {
 		// Generate the embeddings
 		await generateEmbeddings({ shouldRefresh: false, openaiApiKey: OPENAI_KEY, docsRootPath: DOCS_ROOT_PATH })
 	} catch (error) {
-		if (error instanceof Error) {
-			core.setFailed(error.message)
-		} else {
-			console.error(error)
-		}
+		if (error instanceof Error) core.setFailed(error.message)
 	}
 }
+
+// Run the function 'run' and log any errors
+run()
