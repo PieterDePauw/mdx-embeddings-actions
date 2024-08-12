@@ -30,4 +30,5 @@ export type GenerateEmbeddingsProps = {
 	openaiApiKey: string
 	shouldRefresh?: boolean
 	docsRootPath: string
+	databaseUrl: string
 }

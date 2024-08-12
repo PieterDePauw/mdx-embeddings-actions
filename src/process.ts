@@ -1,8 +1,9 @@
 import { Configuration, OpenAIApi } from "openai"
 import { randomUUID } from "crypto"
 import { inspect } from "util"
+import { Pool } from "pg"
 import { eq, ne } from "drizzle-orm"
-import { db } from "./db"
+import { drizzle } from "drizzle-orm/node-postgres"
 import { pages, pageSections, type InsertPageSection, type InsertPage } from "./db/schema"
 import { createMarkdownSource, loadMarkdownSource } from "./markdown"
 import { walk } from "./walk"
@@ -13,7 +14,11 @@ const embeddingsModel = "text-embedding-ada-002"
 const ignoredFiles = ["pages/404.mdx"]
 
 // Generate embeddings for all pages
-export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, docsRootPath = "/docs" }: GenerateEmbeddingsProps): Promise<void> {
+export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, docsRootPath = "/docs", databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
+	// Connect to the database
+	const pool = new Pool({ connectionString: databaseUrl })
+	const db = drizzle(pool, { verbose: true })
+
 	// Generate a new version number and timestamp for the current refresh
 	const refreshVersion = randomUUID()
 	const refreshDate = new Date()
