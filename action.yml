@@ -8,6 +8,12 @@ branding:
   icon: "heart"
   color: "red"
 
+# ENVIRONMENTAL VALUES
+env:
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+  DOCS_ROOT_PATH: ${{ secrets.DOCS_ROOT_PATH }}
+
 # INPUT VALUES
 inputs:
   DATABASE_URL:
