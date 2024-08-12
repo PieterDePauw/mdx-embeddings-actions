@@ -6,13 +6,13 @@ import { defineConfig } from "drizzle-kit"
 dotenv.config({ path: ".env" })
 
 // Check if the POSTGRES_URL environment variable is set
-if (!process.env.POSTGRES_URL) {
-	throw new Error("POSTGRES_URL environment variable is not set")
+if (!process.env.DATABASE_URL) {
+	throw new Error("DATABASE_URL environment variable is not set")
 }
 
 // Export the configuration
 export default defineConfig({
-	dbCredentials: { url: process.env.POSTGRES_URL },
+	dbCredentials: { url: process.env.DATABASE_URL },
 	dialect: "postgresql",
 	schema: "./src/db/schema.ts",
 	out: "./src/db/migrations",
