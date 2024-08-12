@@ -24,3 +24,10 @@ export type ProcessedMdx = {
 	meta: Json
 	sections: Section[]
 }
+
+// GenerateEmbeddingsProps type
+export type GenerateEmbeddingsProps = {
+	openaiApiKey: string
+	shouldRefresh?: boolean
+	docsRootPath: string
+}

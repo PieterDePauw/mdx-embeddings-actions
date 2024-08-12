@@ -6,18 +6,11 @@ import { db } from "./db"
 import { pages, pageSections, type InsertPageSection, type InsertPage } from "./db/schema"
 import { createMarkdownSource, loadMarkdownSource } from "./markdown"
 import { walk } from "./walk"
-import { type SourceData } from "./types"
+import { type GenerateEmbeddingsProps, type SourceData } from "./lib/types"
 
 // Constants
 const embeddingsModel = "text-embedding-ada-002"
 const ignoredFiles = ["pages/404.mdx"]
-
-// GenerateEmbeddingsProps type
-export type GenerateEmbeddingsProps = {
-	openaiApiKey: string
-	shouldRefresh?: boolean
-	docsRootPath: string
-}
 
 // Generate embeddings for all pages
 export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, docsRootPath = "/docs" }: GenerateEmbeddingsProps): Promise<void> {

@@ -1,6 +1,8 @@
-import { readdir, readFile, stat } from "fs/promises"
-import { basename, dirname, join } from "path"
+// Import modules
+import { readdir, stat } from "fs/promises"
+import { basename, join } from "path"
 
+// Walk the directory and return the paths
 export async function walk(directory: string, parentPath?: string): Promise<{ path: string; parentPath?: string }[]> {
 	// > Read the directory contents
 	const immediateFiles = await readdir(directory)
@@ -11,9 +13,9 @@ export async function walk(directory: string, parentPath?: string): Promise<{ pa
 			// >>> Get the full path
 			const entryPath = join(directory, entry)
 			// >>> Get the entryStats of the entry or directory
-			const { isDirectory, isFile } = await stat(entryPath)
+			const entryStat = await stat(entryPath)
 			// >>> Check if it is a directory
-			if (isDirectory()) {
+			if (entryStat.isDirectory()) {
 				// >>>> If the entry is a directory, check for a corresponding .mdx document entry
 				const documentPath = `${basename(entryPath)}.mdx`
 				// >>>> If the document entry exists, set the parent path to the document entry
@@ -24,7 +26,7 @@ export async function walk(directory: string, parentPath?: string): Promise<{ pa
 				return walk(entryPath, nextPath)
 			}
 			// >>> Check if it is a entry
-			if (isFile()) {
+			if (entryStat.isFile()) {
 				return [{ path: entryPath, parentPath: parentPath }]
 			}
 			// >>> Else, if the entry is nor a entry nor a folder, return an empty array

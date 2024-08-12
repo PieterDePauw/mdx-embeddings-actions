@@ -11,10 +11,10 @@ import { toString } from "mdast-util-to-string"
 import { mdxjs } from "micromark-extension-mdxjs"
 import { u } from "unist-builder"
 import { filter } from "unist-util-filter"
-import { type Json, type ProcessedMdx, type SourceData } from "./types"
+import { type Json, type ProcessedMdx, type SourceData } from "./lib/types"
 
 // Get the object from an object expression
-export function getObjectFromExpression(node: ObjectExpression) {
+export function getObjectFromExpression(node: ObjectExpression): Record<string, string | number | bigint | true | RegExp> {
 	return node.properties.reduce<Record<string, string | number | bigint | true | RegExp | undefined>>((object, property) => {
 		if (property.type !== "Property") {
 			return object
@@ -35,7 +35,7 @@ export function getObjectFromExpression(node: ObjectExpression) {
 }
 
 // Extract the meta export from the MDX tree
-export function extractMetaExport(mdxTree: Root) {
+export function extractMetaExport(mdxTree: Root): Record<string, string | number | bigint | true | RegExp> {
 	const metaExportNode = mdxTree.children.find((node): node is MdxjsEsm => {
 		return (
 			node.type === "mdxjsEsm" &&
@@ -67,7 +67,7 @@ export function extractMetaExport(mdxTree: Root) {
 }
 
 // Split the tree by a predicate
-export function splitTreeBy(tree: Root, predicate: (node: Content) => boolean) {
+export function splitTreeBy(tree: Root, predicate: (node: Content) => boolean): Root[] {
 	return tree.children.reduce<Root[]>((trees, node) => {
 		const [lastTree] = trees.slice(-1)
 
