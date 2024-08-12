@@ -11,7 +11,7 @@ You can find this action on the [GitHub Marketplace](https://github.com/marketpl
 In your knowledge base repository, create a new action called `.github/workflows/generate_embeddings.yml` with the following content:
 
 ```yml
-name: 'generate_embeddings'
+name: "generate_embeddings"
 on: # run on main branch changes
   push:
     branches:
@@ -24,10 +24,10 @@ jobs:
       - uses: actions/checkout@v3
       - uses: supabase/embeddings-generator@v0.x.x # Find the latest version in the Marketplace
         with:
-          supabase-url: 'https://your-project-ref.supabase.co'
+          supabase-url: "https://your-project-ref.supabase.co"
           supabase-service-role-key: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           openai-key: ${{ secrets.OPENAI_API_KEY }}
-          docs-root-path: 'docs' # the path to the root of your md(x) files
+          docs-root-path: "docs" # the path to the root of your md(x) files
 ```
 
 Make sure to set `SUPABASE_SERVICE_ROLE_KEY`, and `OPENAI_API_KEY` as repository secrets in your repo settings (settings > secrets > actions).

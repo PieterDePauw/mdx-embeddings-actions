@@ -1,4 +1,4 @@
-# Test 
+# Test
 
 This is a test to ensure that the github action is working.
 
