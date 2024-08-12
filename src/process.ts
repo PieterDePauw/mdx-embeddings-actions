@@ -17,7 +17,7 @@ const ignoredFiles = ["pages/404.mdx"]
 export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, docsRootPath = "/docs", databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
 	// Connect to the database
 	const pool = new Pool({ connectionString: databaseUrl })
-	const db = drizzle(pool, { verbose: true })
+	const db = drizzle(pool)
 
 	// Generate a new version number and timestamp for the current refresh
 	const refreshVersion = randomUUID()
