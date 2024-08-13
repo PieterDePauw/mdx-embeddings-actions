@@ -1,0 +1,33 @@
+name: Generate Embeddings
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  generate_embeddings:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Compile TypeScript
+        run: npm run build
+
+      - name: Run Embeddings Generator
+        run: node dist/main.js
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DOCS_FULL_PATH: ${{ github.workspace }}/${{ secrets.DOCS_ROOT_PATH }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
