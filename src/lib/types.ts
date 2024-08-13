@@ -10,7 +10,7 @@ export type Section = {
 
 // SourceData
 export type SourceData = {
-	source: string
+	// source: string
 	path: string
 	parentPath?: string
 	checksum?: string

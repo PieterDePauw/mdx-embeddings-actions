@@ -12,8 +12,8 @@ import { type GenerateEmbeddingsProps, type SourceData } from "./lib/types"
 
 // Helper function to generate embeddings for all pages
 async function generateEmbeddingSources(docsRootPath: string): Promise<SourceData[]> {
-	const docs = await walk(docsRootPath)
-	return docs.filter(({ path }) => !ignoredFiles.includes(path) && /\.mdx?$/.test(path)).map((entry) => createMarkdownSource("markdown", entry.path, entry.parentPath))
+	const foundDocs = await walk(docsRootPath)
+	return foundDocs.filter(({ path }) => !ignoredFiles.includes(path) && /\.mdx?$/.test(path)).map((entry) => createMarkdownSource(entry.path, entry.parentPath))
 }
 
 // Generate embeddings for all pages
@@ -26,12 +26,6 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 	// Generate a new version number and timestamp for the current refresh
 	const refreshVersion = randomUUID()
 	const refreshDate = new Date()
-
-	// Find all the markdown files in the docs directory
-	// const embeddingSources: SourceData[] = (await walk(docsRootPath))
-	// 	.filter(({ path }) => /\.mdx?$/.test(path))
-	// 	.filter(({ path }) => !ignoredFiles.includes(path))
-	// 	.map((entry) => createMarkdownSource("markdown", entry.path, entry.parentPath))
 
 	// Find all the markdown files in the docs directory
 	const embeddingSources = await generateEmbeddingSources(docsRootPath)
@@ -55,40 +49,41 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 			// Find the existing page in the database and compare checksums
 			const existingPage = await db.select().from(pages).where(eq(pages.path, embeddingSource.path)).limit(1).execute()
 
-			if (!shouldRefresh && existingPage.length > 0 && existingPage[0].checksum === checksum) {
-				const existingParentPage = await db
-					.select()
-					.from(pages)
-					.where(eq(pages.path, embeddingSource.parentPath ?? ""))
-					.limit(1)
-					.execute()
+			if (!shouldRefresh) {
+				if (existingPage.length > 0 && existingPage[0].checksum === checksum) {
+					const existingParentPage = await db
+						.select()
+						.from(pages)
+						.where(eq(pages.path, embeddingSource.parentPath ?? ""))
+						.limit(1)
+						.execute()
 
-				// If parent page changed, update it
-				if (existingParentPage.length > 0 && existingParentPage[0].path !== embeddingSource.parentPath) {
-					console.log(`[${embeddingSource.path}] Parent page has changed. Updating to '${embeddingSource.parentPath}'...`)
+					// If parent page changed, update it
+					if (existingParentPage.length > 0 && existingParentPage[0].path !== embeddingSource.parentPath) {
+						console.log(`[${embeddingSource.path}] Parent page has changed. Updating to '${embeddingSource.parentPath}'...`)
 
+						await db
+							.update(pages)
+							.set({ parent_page_id: existingParentPage[0].id } as Omit<InsertPage, "id">)
+							.where(eq(pages.id, existingPage[0].id))
+							.execute()
+					}
+
+					// No content/embedding update required on this page
+					// Update other meta info
 					await db
 						.update(pages)
-						.set({ parent_page_id: existingParentPage[0].id } as Omit<InsertPage, "id">)
+						.set({
+							type: "markdown",
+							meta: JSON.stringify(meta),
+							version: refreshVersion,
+							last_refresh: refreshDate,
+						} as Omit<InsertPage, "id">)
 						.where(eq(pages.id, existingPage[0].id))
 						.execute()
+
+					continue
 				}
-
-				// No content/embedding update required on this page
-				// Update other meta info
-				await db
-					.update(pages)
-					.set({
-						type: "markdown",
-						source: embeddingSource.source,
-						meta: JSON.stringify(meta),
-						version: refreshVersion,
-						last_refresh: refreshDate,
-					} as Omit<InsertPage, "id">)
-					.where(eq(pages.id, existingPage[0].id))
-					.execute()
-
-				continue
 			}
 
 			// If the page already exists, remove its sections and embeddings
@@ -109,31 +104,11 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 				.execute()
 
 			// Create/update page record. Intentionally clear checksum until we have successfully generated all page sections.
+			// prettier-ignore
 			const [page] = await db
 				.insert(pages)
-				.values({
-					id: randomUUID(),
-					checksum: embeddingSource.checksum,
-					path: embeddingSource.path,
-					type: "markdown",
-					source: embeddingSource.source,
-					meta: JSON.stringify(meta),
-					parent_page_id: parentPage.length > 0 ? parentPage[0].id : null,
-					version: refreshVersion,
-					last_refresh: refreshDate,
-				} as InsertPage)
-				.onConflictDoUpdate({
-					target: pages.path,
-					set: {
-						checksum: null,
-						type: "markdown",
-						source: embeddingSource.source,
-						meta: JSON.stringify(meta),
-						parent_page_id: parentPage.length > 0 ? parentPage[0].id : null,
-						version: refreshVersion,
-						last_refresh: refreshDate,
-					} as Omit<InsertPage, "id">,
-				})
+				.values({ id: randomUUID(), checksum: embeddingSource.checksum, path: embeddingSource.path, type: "markdown", meta: JSON.stringify(meta), parent_page_id: parentPage.length > 0 ? parentPage[0].id : null, version: refreshVersion, last_refresh: refreshDate } as InsertPage)
+				.onConflictDoUpdate({ target: pages.path, set: { checksum: null, type: "markdown", meta: JSON.stringify(meta), parent_page_id: parentPage.length > 0 ? parentPage[0].id : null, version: refreshVersion, last_refresh: refreshDate } as Omit<InsertPage, "id"> })
 				.returning()
 				.execute()
 
@@ -156,35 +131,20 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 
 					const [responseData] = embeddingResponse.data.data
 
-					await db
-						.insert(pageSections)
-						.values({
-							id: randomUUID(),
-							page_id: page.id,
-							slug,
-							heading,
-							content,
-							token_count: embeddingResponse.data.usage.total_tokens,
-							embedding: responseData.embedding,
-						} as InsertPageSection)
-						.execute()
+					// prettier-ignore
+					await db.insert(pageSections).values({ id: randomUUID(), page_id: page.id, slug, heading, content, token_count: embeddingResponse.data.usage.total_tokens, embedding: responseData.embedding } as InsertPageSection).execute()
 				} catch (err) {
 					console.error(`Failed to generate embeddings for '${embeddingSource.path}' page section starting with '${input.slice(0, 40)}...'`)
-
 					throw err
 				}
 			}
 
 			// Set page checksum so that we know this page was stored successfully
-			await db
-				.update(pages)
-				.set({ checksum } as Omit<InsertPage, "id">)
-				.where(eq(pages.id, page.id))
-				.execute()
+			// prettier-ignore
+			await db.update(pages).set({ checksum } as Omit<InsertPage, "id">).where(eq(pages.id, page.id)).execute()
 		} catch (err) {
-			console.error(
-				`Page '${embeddingSource.path}' or one/multiple of its page sections failed to store properly. Page has been marked with null checksum to indicate that it needs to be re-generated.`,
-			)
+			// prettier-ignore
+			console.error(`Page '${embeddingSource.path}' or one/multiple of its page sections failed to store properly. Page has been marked with null checksum to indicate that it needs to be re-generated.`)
 			console.error(err)
 		}
 	}

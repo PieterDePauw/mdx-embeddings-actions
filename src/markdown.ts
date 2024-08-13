@@ -170,13 +170,13 @@ export function parseHeading(input: string): { heading: string; customAnchor?: s
 // }
 
 // Create a markdown source
-export function createMarkdownSource(source: string, filePath: string, parentFilePath?: string): SourceData {
+export function createMarkdownSource(filePath: string, parentFilePath?: string): SourceData {
 	// > Remove the pages prefix and file extension
 	const path = filePath.replace(/^pages/, "").replace(/\.mdx?$/, "")
 	// > Remove the pages prefix and file extension from the parent file path
 	const parentPath = parentFilePath?.replace(/^pages/, "").replace(/\.mdx?$/, "")
 	// > Return the source data
-	return { source: source, path: path, parentPath: parentPath }
+	return { path: path, parentPath: parentPath }
 }
 
 // Load the markdown source
