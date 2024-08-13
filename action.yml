@@ -27,7 +27,7 @@ inputs:
   DOCS_ROOT_PATH:
     required: true
     description: "The path to the root of your knowledge base or docs folder"
-    default: "./docs"
+    default: "docs"
 
 # RUNTIME CONFIGURATION
 runs:

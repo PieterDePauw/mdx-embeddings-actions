@@ -9,7 +9,10 @@ on:
 jobs:
   generate_embeddings:
     runs-on: ubuntu-latest
-
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DOCS_ROOT_PATH: ${{ secrets.DOCS_ROOT_PATH }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,7 +30,3 @@ jobs:
 
       - name: Run Embeddings Generator
         run: node dist/main.js
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DOCS_ROOT_PATH: ${{ secrets.DOCS_ROOT_PATH }}
