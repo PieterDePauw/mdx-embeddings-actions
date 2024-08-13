@@ -4,9 +4,9 @@ import { pgTable, text, jsonb, uuid, timestamp, integer, vector, type AnyPgColum
 // Define the table schema for the pages table
 export const pages = pgTable("pages", {
 	id: uuid("id").primaryKey(),
-	parent_page_id: uuid("parent_page_id").references((): AnyPgColumn => pages.id),
 	path: text("path"),
-	parent_path: text("parent_path"),
+	parent_page_id: uuid("parent_page_id").references((): AnyPgColumn => pages.id),
+	parent_path: text("parent_path").references((): AnyPgColumn => pages.path),
 	checksum: text("checksum"),
 	meta: jsonb("meta"),
 	source: text("source"),
