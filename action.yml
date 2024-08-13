@@ -8,25 +8,17 @@ branding:
   icon: "heart"
   color: "red"
 
-# ENVIRONMENTAL VALUES
-# env:
-#   DATABASE_URL: ${{ secrets.DATABASE_URL }}
-#   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-#   DOCS_ROOT_PATH: ${{ secrets.DOCS_ROOT_PATH }}
-#   # DOCS_FULL_PATH: ${{ github.workspace }}/${{ secrets.DOCS_ROOT_PATH }}
-#   directory: ${{ github.workspace }}/docs
-
 # INPUT VALUES
 inputs:
-  DATABASE_URL:
-    required: true
-    description: "Your Vercel Postgres database URL"
   OPENAI_API_KEY:
+    description: "OpenAI API Key"
     required: true
-    description: "Your OpenAI API key"
+  DATABASE_URL:
+    description: "Database URL"
+    required: true
   DOCS_ROOT_PATH:
+    description: "Path to the documentation directory"
     required: true
-    description: "The path to the root of your knowledge base or docs folder"
     default: "docs"
 
 # RUNTIME CONFIGURATION
