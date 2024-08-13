@@ -11,6 +11,6 @@
 			"@/*": ["./*"]
 		}
 	},
-	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".deprecated/markdown-extra.ts"],
 	"exclude": ["node_modules"]
 }

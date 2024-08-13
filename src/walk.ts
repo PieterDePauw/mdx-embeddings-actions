@@ -1,7 +1,9 @@
 // Import modules
 import { readdir, stat } from "fs/promises"
 import { basename, join } from "path"
-import { type WalkResultType } from "./lib/types"
+
+// WalkResultType type
+export type WalkResultType = Promise<{ path: string; parentPath?: string }[]>
 
 // Walk the directory and return the paths
 export async function walk(directory: string, parentPath?: string): WalkResultType {

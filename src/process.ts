@@ -7,13 +7,26 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { pages, pageSections, type InsertPageSection, type InsertPage } from "./db/schema"
 import { createMarkdownSource, loadMarkdownSource } from "./markdown"
 import { walk } from "./walk"
-import { embeddingsModel, ignoredFiles, defaultDocsRootPath } from "./lib/constants"
-import { type GenerateEmbeddingsProps, type SourceData } from "./lib/types"
+
+// Constants
+export const embeddingsModel = "text-embedding-ada-002"
+export const ignoredFiles = ["pages/404.mdx"]
+export const defaultDocsRootPath = "./docs"
 
 // Helper function to generate embeddings for all pages
-async function generateEmbeddingSources(docsRootPath: string): Promise<SourceData[]> {
+async function generateEmbeddingSources(docsRootPath: string) {
 	const foundDocs = await walk(docsRootPath)
-	return foundDocs.filter(({ path }) => !ignoredFiles.includes(path) && /\.mdx?$/.test(path)).map((entry) => createMarkdownSource(entry.path, entry.parentPath))
+	const markdownFiles = foundDocs.filter(({ path }) => !ignoredFiles.includes(path) && /\.mdx?$/.test(path))
+	const markdownSources = markdownFiles.map((entry) => createMarkdownSource(entry.path, entry.parentPath))
+	return markdownSources
+}
+
+// GenerateEmbeddingsProps type
+export type GenerateEmbeddingsProps = {
+	openaiApiKey: string
+	shouldRefreshAllPages?: boolean
+	docsRootPath: string
+	databaseUrl: string
 }
 
 // Generate embeddings for all pages

@@ -7,8 +7,19 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { pages, pageSections, type InsertPageSection, type InsertPage, type SelectPage } from "./db/schema"
 import { createMarkdownSource, loadMarkdownSource } from "./markdown"
 import { walk } from "./walk"
-import { embeddingsModel, ignoredFiles, defaultDocsRootPath } from "./lib/constants"
-import { type GenerateEmbeddingsProps } from "./lib/types"
+
+// Constants
+export const embeddingsModel = "text-embedding-ada-002"
+export const ignoredFiles = ["pages/404.mdx"]
+export const defaultDocsRootPath = "./docs"
+
+// GenerateEmbeddingsProps type
+export type GenerateEmbeddingsProps = {
+	openaiApiKey: string
+	shouldRefreshAllPages?: boolean
+	docsRootPath: string
+	databaseUrl: string
+}
 
 // Generate embeddings for all pages
 export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages = false, docsRootPath = defaultDocsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
@@ -37,7 +48,7 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages =
 				// Load markdown file content and metadata
 				const { checksum, meta, sections } = await loadMarkdownSource(embeddingSource)
 
-				// Check if we should refresh all pages or only changed pages
+				// Find the existing page in the database and compare checksums
 				const [existingPage] = await db.select().from(pages).where(eq(pages.path, embeddingSource.path)).limit(1).execute()
 				const shouldRefreshExistingPage = !existingPage || existingPage.checksum !== checksum
 
