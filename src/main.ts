@@ -15,7 +15,7 @@ export async function run(): Promise<void> {
 		const DOCS_FULL_PATH = path.join(process.env.GITHUB_WORKSPACE || "", DOCS_ROOT_PATH)
 
 		// Generate the embeddings
-		await generateEmbeddings({ shouldRefresh: false, openaiApiKey: OPENAI_API_KEY, docsRootPath: DOCS_FULL_PATH, databaseUrl: DATABASE_URL })
+		await generateEmbeddings({ shouldRefreshAllPages: false, openaiApiKey: OPENAI_API_KEY, docsRootPath: DOCS_FULL_PATH, databaseUrl: DATABASE_URL })
 
 		// Log that the embeddings were generated successfully
 		core.info("Embeddings generated successfully.")

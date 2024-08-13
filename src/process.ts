@@ -17,7 +17,7 @@ async function generateEmbeddingSources(docsRootPath: string): Promise<SourceDat
 }
 
 // Generate embeddings for all pages
-export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, docsRootPath = defaultDocsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
+export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages = false, docsRootPath = defaultDocsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
 	// Connect to the database
 	const { Pool } = pg
 	const pool = new Pool({ connectionString: databaseUrl })
@@ -34,7 +34,7 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 	console.log(`Discovered ${embeddingSources.length} pages`)
 
 	// Iterate over the embedding sources
-	if (!shouldRefresh) {
+	if (!shouldRefreshAllPages) {
 		console.log("Checking which pages are new or have changed")
 	} else {
 		console.log("Refresh flag set, re-generating all pages")
@@ -49,7 +49,7 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 			// Find the existing page in the database and compare checksums
 			const existingPage = await db.select().from(pages).where(eq(pages.path, embeddingSource.path)).limit(1).execute()
 
-			if (!shouldRefresh) {
+			if (!shouldRefreshAllPages) {
 				if (existingPage.length > 0 && existingPage[0].checksum === checksum) {
 					const existingParentPage = await db
 						.select()
@@ -74,7 +74,6 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 					await db
 						.update(pages)
 						.set({
-							type: "markdown",
 							meta: JSON.stringify(meta),
 							version: refreshVersion,
 							last_refresh: refreshDate,
@@ -88,7 +87,7 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 
 			// If the page already exists, remove its sections and embeddings
 			if (existingPage.length > 0) {
-				if (!shouldRefresh) {
+				if (!shouldRefreshAllPages) {
 					console.log(`[${embeddingSource.path}] Docs have changed, removing old page sections and their embeddings`)
 				} else {
 					console.log(`[${embeddingSource.path}] Refresh flag set, removing old page sections and their embeddings`)
@@ -107,8 +106,8 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 			// prettier-ignore
 			const [page] = await db
 				.insert(pages)
-				.values({ id: randomUUID(), checksum: embeddingSource.checksum, path: embeddingSource.path, type: "markdown", meta: JSON.stringify(meta), parent_page_id: parentPage.length > 0 ? parentPage[0].id : null, version: refreshVersion, last_refresh: refreshDate } as InsertPage)
-				.onConflictDoUpdate({ target: pages.path, set: { checksum: null, type: "markdown", meta: JSON.stringify(meta), parent_page_id: parentPage.length > 0 ? parentPage[0].id : null, version: refreshVersion, last_refresh: refreshDate } as Omit<InsertPage, "id"> })
+				.values({ id: randomUUID(), checksum: embeddingSource.checksum, path: embeddingSource.path, meta: JSON.stringify(meta), parent_page_id: parentPage.length > 0 ? parentPage[0].id : null, version: refreshVersion, last_refresh: refreshDate } as InsertPage)
+				// .onConflictDoUpdate({ target: pages.path, set: { checksum: null, meta: JSON.stringify(meta), parent_page_id: parentPage.length > 0 ? parentPage[0].id : null, version: refreshVersion, last_refresh: refreshDate } as Omit<InsertPage, "id"> })
 				.returning()
 				.execute()
 
