@@ -78829,125 +78829,98 @@ function generateEmbeddingSources(docsRootPath) {
 }
 // Generate embeddings for all pages
 function generateEmbeddings(_a) {
-    return process_awaiter(this, arguments, void 0, function* ({ shouldRefreshAllPages = false, openaiApiKey, docsRootPath, databaseUrl }) {
-        var _b;
-        // Connect to the database
+    return process_awaiter(this, arguments, void 0, function* ({ openaiApiKey, shouldRefreshAllPages = false, docsRootPath, databaseUrl }) {
+        // Set up database connection
         const { Pool } = (lib_default());
         const pool = new Pool({ connectionString: databaseUrl });
         const db = drizzle(pool);
-        // Generate a new version number and timestamp for the current refresh
+        // Set up OpenAI API configuration
+        const configuration = new dist.Configuration({ apiKey: openaiApiKey });
+        const openai = new dist.OpenAIApi(configuration);
+        // Generate a unique version ID for this run
         const refreshVersion = (0,external_crypto_.randomUUID)();
         const refreshDate = new Date();
-        // Find all the markdown files in the docs directory
-        const embeddingSources = yield generateEmbeddingSources(docsRootPath);
-        // Log that the process is starting
-        console.log(`Discovered ${embeddingSources.length} pages`);
-        // Iterate over the embedding sources
-        if (!shouldRefreshAllPages) {
-            console.log("Checking which pages are new or have changed");
-        }
-        else {
-            console.log("Refresh flag set, re-generating all pages");
-        }
-        // Iterate over the embedding sources
-        for (const embeddingSource of embeddingSources) {
-            try {
-                // Calculate the checksum, extract the meta data and find the sections
-                const { checksum, meta, sections } = yield loadMarkdownSource(embeddingSource);
-                // Find the existing page in the database and compare checksums
-                const existingPage = yield db.select().from(pages).where(eq(pages.path, embeddingSource.path)).limit(1).execute();
-                if (!shouldRefreshAllPages) {
-                    if (existingPage.length > 0 && existingPage[0].checksum === checksum) {
-                        const existingParentPage = yield db
-                            .select()
-                            .from(pages)
-                            .where(eq(pages.path, (_b = embeddingSource.parentPath) !== null && _b !== void 0 ? _b : ""))
-                            .limit(1)
-                            .execute();
-                        // If parent page changed, update it
-                        if (existingParentPage.length > 0 && existingParentPage[0].path !== embeddingSource.parentPath) {
-                            console.log(`[${embeddingSource.path}] Parent page has changed. Updating to '${embeddingSource.parentPath}'...`);
-                            yield db
-                                .update(pages)
-                                .set({ parent_page_id: existingParentPage[0].id })
-                                .where(eq(pages.id, existingPage[0].id))
-                                .execute();
+        try {
+            // Step 1: Identify all markdown files that need embeddings
+            const embeddingSources = yield generateEmbeddingSources(docsRootPath);
+            console.log(`Discovered ${embeddingSources.length} pages`);
+            // Step 2: Process each markdown file
+            for (const embeddingSource of embeddingSources) {
+                try {
+                    // Load markdown file content and metadata
+                    const { checksum, meta, sections } = yield loadMarkdownSource(embeddingSource);
+                    // Find the existing page in the database and compare checksums
+                    const [existingPage] = yield db.select().from(pages).where(eq(pages.path, embeddingSource.path)).limit(1).execute();
+                    const shouldRefreshExistingPage = !existingPage || existingPage.checksum !== checksum;
+                    // If we should refresh all pages, or if the page has changed, we need to regenerate the embeddings
+                    if (shouldRefreshAllPages || shouldRefreshExistingPage) {
+                        // > If we are refreshing all pages, remove the old sections
+                        if (shouldRefreshAllPages) {
+                            // prettier-ignore
+                            yield db.delete(pageSections).where(eq(pageSections.page_id, (existingPage === null || existingPage === void 0 ? void 0 : existingPage.id) || "")).execute();
+                            console.log(`[${embeddingSource.path}] Refreshing page, removing old sections`);
                         }
-                        // No content/embedding update required on this page
-                        // Update other meta info
-                        yield db
-                            .update(pages)
-                            .set({
-                            meta: JSON.stringify(meta),
-                            version: refreshVersion,
-                            last_refresh: refreshDate,
-                        })
-                            .where(eq(pages.id, existingPage[0].id))
-                            .execute();
-                        continue;
-                    }
-                }
-                // If the page already exists, remove its sections and embeddings
-                if (existingPage.length > 0) {
-                    if (!shouldRefreshAllPages) {
-                        console.log(`[${embeddingSource.path}] Docs have changed, removing old page sections and their embeddings`);
+                        if (existingPage && shouldRefreshExistingPage) {
+                            // prettier-ignore
+                            yield db.delete(pageSections).where(eq(pageSections.page_id, existingPage.id)).execute();
+                            console.log(`[${embeddingSource.path}] Updating changed page, removing old sections`);
+                        }
+                        // Determine the path of the parent page
+                        // prettier-ignore
+                        const [parentPage] = yield db.select().from(pages).where(eq(pages.path, embeddingSource.parentPath || "")).limit(1).execute();
+                        // Insert or update the page record
+                        // prettier-ignore
+                        const [page] = yield db.insert(pages).values({ id: (0,external_crypto_.randomUUID)(), checksum: null, path: embeddingSource.path, meta: JSON.stringify(meta), parent_page_id: (parentPage === null || parentPage === void 0 ? void 0 : parentPage.id) || null, version: refreshVersion, last_refresh: refreshDate }).returning().execute();
+                        console.log(`[${embeddingSource.path}] Generating embeddings for ${sections.length} sections`);
+                        // Generate embeddings for each section
+                        for (const section of sections) {
+                            // > Destructure the section data
+                            const { slug, heading, content } = section;
+                            // > Replace newlines by spaces for better embedding results
+                            const input = content.replace(/\n/g, " ");
+                            // Generate embeddings for the section
+                            try {
+                                const embeddingResponse = yield openai.createEmbedding({ model: embeddingsModel, input });
+                                if (embeddingResponse.status !== 200)
+                                    throw new Error((0,external_util_.inspect)(embeddingResponse.data, false, 2));
+                                const [responseData] = embeddingResponse.data.data;
+                                // prettier-ignore
+                                yield db.insert(pageSections).values({ id: (0,external_crypto_.randomUUID)(), page_id: page.id, slug, heading, content, token_count: embeddingResponse.data.usage.total_tokens, embedding: responseData.embedding }).execute();
+                            }
+                            catch (err) {
+                                console.error(`Failed to generate embeddings for section starting with '${input.slice(0, 40)}'`);
+                                throw err;
+                            }
+                        }
+                        // Update the page record with the correct checksum after successful embedding
+                        // prettier-ignore
+                        yield db.update(pages).set({ checksum }).where(eq(pages.id, page.id)).execute();
                     }
                     else {
-                        console.log(`[${embeddingSource.path}] Refresh flag set, removing old page sections and their embeddings`);
-                    }
-                    yield db.delete(pageSections).where(eq(pageSections.page_id, existingPage[0].id)).execute();
-                }
-                const parentPage = yield db
-                    .select()
-                    .from(pages) /* .where(eq(pages.path, parentPath)) */
-                    .limit(1)
-                    .execute();
-                // Create/update page record. Intentionally clear checksum until we have successfully generated all page sections.
-                // prettier-ignore
-                const [page] = yield db
-                    .insert(pages)
-                    .values({ id: (0,external_crypto_.randomUUID)(), checksum: embeddingSource.checksum, path: embeddingSource.path, meta: JSON.stringify(meta), parent_page_id: parentPage.length > 0 ? parentPage[0].id : null, version: refreshVersion, last_refresh: refreshDate })
-                    // .onConflictDoUpdate({ target: pages.path, set: { checksum: null, meta: JSON.stringify(meta), parent_page_id: parentPage.length > 0 ? parentPage[0].id : null, version: refreshVersion, last_refresh: refreshDate } as Omit<InsertPage, "id"> })
-                    .returning()
-                    .execute();
-                // Log that the process is complete
-                console.log(`[${embeddingSource.path}] Adding ${sections.length} page sections (with embeddings)`);
-                // Generate embeddings for each page section
-                for (const { slug, heading, content } of sections) {
-                    // OpenAI recommends replacing newlines with spaces for best results (specific to embeddings)
-                    const input = content.replace(/\n/g, " ");
-                    try {
-                        const configuration = new dist.Configuration({ apiKey: openaiApiKey });
-                        const openai = new dist.OpenAIApi(configuration);
-                        const embeddingResponse = yield openai.createEmbedding({ model: embeddingsModel, input });
-                        if (embeddingResponse.status !== 200) {
-                            throw new Error((0,external_util_.inspect)(embeddingResponse.data, false, 2));
-                        }
-                        const [responseData] = embeddingResponse.data.data;
+                        // If the page has not changed, skip the page and log a message
+                        console.log(`[${embeddingSource.path}] No changes detected, skipping.`);
                         // prettier-ignore
-                        yield db.insert(pageSections).values({ id: (0,external_crypto_.randomUUID)(), page_id: page.id, slug, heading, content, token_count: embeddingResponse.data.usage.total_tokens, embedding: responseData.embedding }).execute();
-                    }
-                    catch (err) {
-                        console.error(`Failed to generate embeddings for '${embeddingSource.path}' page section starting with '${input.slice(0, 40)}...'`);
-                        throw err;
+                        yield db.update(pages).set({ meta: JSON.stringify(meta), version: refreshVersion, last_refresh: refreshDate }).where(eq(pages.id, existingPage[0].id)).execute();
                     }
                 }
-                // Set page checksum so that we know this page was stored successfully
-                // prettier-ignore
-                yield db.update(pages).set({ checksum }).where(eq(pages.id, page.id)).execute();
+                catch (err) {
+                    console.error(`Failed to process embedding source '${embeddingSource.path}'`);
+                    console.error(err);
+                }
             }
-            catch (err) {
-                // prettier-ignore
-                console.error(`Page '${embeddingSource.path}' or one/multiple of its page sections failed to store properly. Page has been marked with null checksum to indicate that it needs to be re-generated.`);
-                console.error(err);
-            }
+            // Step 3: Clean up old pages that were not refreshed
+            console.log("Removing old pages and their sections");
+            yield db.delete(pages).where(ne(pages.version, refreshVersion)).execute();
+            console.log("Embedding generation complete");
         }
-        // Log that the process is complete
-        console.log(`Removing old pages and their sections`);
-        // Delete pages that have been removed (and their sections via cascade)
-        yield db.delete(pages).where(ne(pages.version, refreshVersion)).execute();
-        // Log that the process is complete
-        console.log("Embedding generation complete");
+        catch (err) {
+            console.error("Error during embedding generation process");
+            console.error(err);
+        }
+        finally {
+            // Ensure the database connection is closed
+            yield pool.end();
+        }
     });
 }
 

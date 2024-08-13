@@ -11,7 +11,6 @@ import { walk } from "./walk"
 // Constants
 export const embeddingsModel = "text-embedding-ada-002"
 export const ignoredFiles = ["pages/404.mdx"]
-export const defaultDocsRootPath = "./docs"
 
 // GenerateEmbeddingsProps type
 export type GenerateEmbeddingsProps = {
@@ -21,8 +20,16 @@ export type GenerateEmbeddingsProps = {
 	databaseUrl: string
 }
 
+// Helper function to generate embeddings for all pages
+async function generateEmbeddingSources(docsRootPath: string) {
+	const foundDocs = await walk(docsRootPath)
+	const markdownFiles = foundDocs.filter(({ path }) => !ignoredFiles.includes(path) && /\.mdx?$/.test(path))
+	const markdownSources = markdownFiles.map((entry) => createMarkdownSource(entry.path, entry.parentPath))
+	return markdownSources
+}
+
 // Generate embeddings for all pages
-export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages = false, docsRootPath = defaultDocsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
+export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages = false, docsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
 	// Set up database connection
 	const { Pool } = pg
 	const pool = new Pool({ connectionString: databaseUrl })
@@ -38,8 +45,7 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages =
 
 	try {
 		// Step 1: Identify all markdown files that need embeddings
-		const docs = await walk(docsRootPath)
-		const embeddingSources = docs.filter(({ path }) => !ignoredFiles.includes(path) && /\.mdx?$/.test(path)).map((entry) => createMarkdownSource(entry.path, entry.parentPath))
+		const embeddingSources = await generateEmbeddingSources(docsRootPath)
 		console.log(`Discovered ${embeddingSources.length} pages`)
 
 		// Step 2: Process each markdown file
