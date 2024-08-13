@@ -1,5 +1,6 @@
 // Import modules
 import * as core from "@actions/core"
+import * as path from "path"
 import { generateEmbeddings } from "./process"
 
 // Define the function 'run'
@@ -11,10 +12,13 @@ export async function run(): Promise<void> {
 		const DATABASE_URL = core.getInput("DATABASE_URL")
 
 		// Get the environment variables
-		// const DOCS_FULL_PATH = process.env.DOCS_FULL_PATH
+		const DOCS_FULL_PATH = path.join(process.env.GITHUB_WORKSPACE || "", DOCS_ROOT_PATH)
 
 		// Generate the embeddings
-		await generateEmbeddings({ shouldRefresh: false, openaiApiKey: OPENAI_API_KEY, docsRootPath: DOCS_ROOT_PATH, databaseUrl: DATABASE_URL })
+		await generateEmbeddings({ shouldRefresh: false, openaiApiKey: OPENAI_API_KEY, docsRootPath: DOCS_FULL_PATH, databaseUrl: DATABASE_URL })
+
+		// Log that the embeddings were generated successfully
+		core.info("Embeddings generated successfully.")
 	} catch (error) {
 		if (error instanceof Error) core.setFailed(error.message)
 	}

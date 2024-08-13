@@ -29,5 +29,5 @@ jobs:
         run: node dist/main.js
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          DOCS_FULL_PATH: ${{ github.workspace }}/${{ secrets.DOCS_ROOT_PATH }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DOCS_ROOT_PATH: ${{ secrets.DOCS_ROOT_PATH }}
