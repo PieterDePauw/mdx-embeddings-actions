@@ -11,6 +11,7 @@
 	"description": "A GitHub Action that converts your markdown files into embeddings and stores them in your Postgres database, allowing you to perform vector similarity search inside your documentation and website.",
 	"main": "src/main.ts",
 	"scripts": {
+		"release": "./script/release",
 		"ci-test": "npx jest",
 		"coverage": "npm run test --coverage && npx make-coverage-badge --output-path ./badges/coverage.svg",
 		"lint": "eslint src/**/*.ts",
