@@ -5,8 +5,11 @@ import { generateEmbeddings } from "./process"
 async function run(): Promise<void> {
 	try {
 		const OPENAI_API_KEY = process.env.OPENAI_API_KEY || core.getInput("OPENAI_API_KEY")
+		core.info("OPENAI_API_KEY: " + Boolean(OPENAI_API_KEY))
 		const DOCS_ROOT_PATH = process.env.DOCS_ROOT_PATH || core.getInput("DOCS_ROOT_PATH")
+		core.info("DOCS_ROOT_PATH: " + Boolean(DOCS_ROOT_PATH))
 		const DATABASE_URL = process.env.DATABASE_URL || core.getInput("DATABASE_URL")
+		core.info("DATABASE_URL: " + Boolean(DATABASE_URL))
 
 		const GITHUB_WORKSPACE = process.env.GITHUB_WORKSPACE || ""
 		const DOCS_FULL_PATH = path.join(GITHUB_WORKSPACE, DOCS_ROOT_PATH)
