@@ -1,9 +1,9 @@
-import pg from "pg"
+import { createPool } from "@vercel/postgres"
 import { Configuration, OpenAIApi } from "openai"
 import { randomUUID } from "crypto"
 import { inspect } from "util"
-import { eq, ne } from "drizzle-orm"
-import { drizzle } from "drizzle-orm/node-postgres"
+import { eq, ne, sql } from "drizzle-orm"
+import { drizzle } from "drizzle-orm/vercel-postgres"
 import { pages, pageSections, type InsertPageSection, type InsertPage, type SelectPage } from "./db/schema"
 import { createMarkdownSource, loadMarkdownSource } from "./markdown"
 import { walk } from "./walk"
@@ -31,8 +31,7 @@ async function generateEmbeddingSources(docsRootPath: string) {
 // Generate embeddings for all pages
 export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages = false, docsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
 	// Set up database connection
-	const { Pool } = pg
-	const pool = new Pool({ connectionString: databaseUrl })
+	const pool = createPool({ connectionString: databaseUrl })
 	const db = drizzle(pool)
 
 	// Set up OpenAI API configuration
@@ -44,6 +43,10 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages =
 	const refreshDate = new Date()
 
 	try {
+		// Step 0: Connect to the database
+		await db.execute(sql`SELECT NOW()`)
+		console.log("Successfully connected to the database")
+
 		// Step 1: Identify all markdown files that need embeddings
 		const embeddingSources = await generateEmbeddingSources(docsRootPath)
 		console.log(`Discovered ${embeddingSources.length} pages`)
