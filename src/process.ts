@@ -11,7 +11,6 @@ import { walk } from "./walk"
 // Constants
 export const embeddingsModel = "text-embedding-ada-002"
 export const ignoredFiles = ["pages/404.mdx"]
-export const defaultDocsRootPath = "./docs"
 
 // Helper function to generate embeddings for all pages
 async function generateEmbeddingSources(docsRootPath: string) {
@@ -23,14 +22,14 @@ async function generateEmbeddingSources(docsRootPath: string) {
 
 // GenerateEmbeddingsProps type
 export type GenerateEmbeddingsProps = {
-	openaiApiKey: string
 	shouldRefreshAllPages?: boolean
+	openaiApiKey: string
 	docsRootPath: string
 	databaseUrl: string
 }
 
 // Generate embeddings for all pages
-export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages = false, docsRootPath = defaultDocsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
+export async function generateEmbeddings({ shouldRefreshAllPages = false, openaiApiKey, docsRootPath, databaseUrl }: GenerateEmbeddingsProps) {
 	// Connect to the database
 	const { Pool } = pg
 	const pool = new Pool({ connectionString: databaseUrl })

@@ -3,13 +3,9 @@ name: Generate Embeddings
 on:
   push:
     branches:
-      - main  # or your default branch name
-  workflow_dispatch:
-    inputs:
-      docs_path:
-        description: 'Path to the documentation directory'
-        required: true
-        default: 'docs'
+      - main # or your default branch name
+    paths:
+      - "docs/**" # Adjust this to match your documentation directory
 
 jobs:
   generate-embeddings:
@@ -20,16 +16,15 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'  # Adjust this to match your preferred Node.js version
+          node-version: "16" # Adjust this to match your preferred Node.js version
 
       - name: Install dependencies
-        run: npm ci  # or yarn install, depending on your package manager
+        run: npm ci # or yarn install, depending on your package manager
 
       - name: Generate Embeddings
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DOCS_ROOT_PATH: ${{ github.event.inputs.docs_path || 'docs' }}
         run: |
           node -e "
           const { run } = require('./main');
