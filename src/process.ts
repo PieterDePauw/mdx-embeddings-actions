@@ -4,7 +4,7 @@ import { randomUUID } from "crypto"
 import { inspect } from "util"
 import { eq, ne, sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/vercel-postgres"
-import { pages, pageSections, type InsertPageSection, type InsertPage, type SelectPage } from "./db/schema"
+import { pages, pageSections, type InsertPage, type SelectPage } from "./db/schema"
 import { createMarkdownSource, loadMarkdownSource } from "./markdown"
 import { walk } from "./walk"
 
@@ -21,11 +21,10 @@ export type GenerateEmbeddingsProps = {
 }
 
 // Helper function to generate embeddings for all pages
-async function generateEmbeddingSources(docsRootPath: string) {
+async function generateDocs(docsRootPath: string) {
 	const foundDocs = await walk(docsRootPath)
 	const markdownFiles = foundDocs.filter(({ path }) => !ignoredFiles.includes(path) && /\.mdx?$/.test(path))
-	const markdownSources = markdownFiles.map((entry) => createMarkdownSource(entry.path, entry.parentPath))
-	return markdownSources
+	return markdownFiles.map((entry) => createMarkdownSource(entry.path, entry.parentPath))
 }
 
 // Generate embeddings for all pages
@@ -48,7 +47,7 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages =
 		console.log("Successfully connected to the database")
 
 		// Step 1: Identify all markdown files that need embeddings
-		const embeddingSources = await generateEmbeddingSources(docsRootPath)
+		const embeddingSources = await generateDocs(docsRootPath)
 		console.log(`Discovered ${embeddingSources.length} pages`)
 
 		// Step 2: Process each markdown file
@@ -57,58 +56,80 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages =
 				// Load markdown file content and metadata
 				const { checksum, meta, sections } = await loadMarkdownSource(embeddingSource)
 
-				// Find the existing page in the database and compare checksums
-				const [existingPage] = await db.select().from(pages).where(eq(pages.path, embeddingSource.path)).limit(1).execute()
+				// Find the page in the database (if it already exists) based on its path
+				const [existingPage] = await db
+					.select({ id: pages.id, path: pages.path, checksum: pages.checksum, parent_page: { id: pages.id, path: pages.path } })
+					.from(pages)
+					.where(eq(pages.path, embeddingSource.path))
+					.limit(1)
+					.execute()
+
+				// Determine if we should refresh all pages, or if the page has changed
 				const shouldRefreshExistingPage = !existingPage || existingPage.checksum !== checksum
 
 				// If we should refresh all pages, or if the page has changed, we need to regenerate the embeddings
 				if (shouldRefreshAllPages || shouldRefreshExistingPage) {
-					// > If we are refreshing all pages, remove the old sections
+					// > If we are refreshing all pages, remove the old sections for the existing page
 					if (shouldRefreshAllPages) {
 						// prettier-ignore
 						await db.delete(pageSections).where(eq(pageSections.page_id, existingPage?.id || "")).execute()
 						console.log(`[${embeddingSource.path}] Refreshing page, removing old sections`)
 					}
 
+					// > If we are refreshing only the changed pages, remove the old sections for the existing page
 					if (existingPage && shouldRefreshExistingPage) {
 						// prettier-ignore
 						await db.delete(pageSections).where(eq(pageSections.page_id, existingPage.id)).execute()
 						console.log(`[${embeddingSource.path}] Updating changed page, removing old sections`)
 					}
 
-					// Determine the path of the parent page
-					// prettier-ignore
-					const [parentPage] = await db.select().from(pages).where(eq(pages.path, embeddingSource.parentPath || "")).limit(1).execute()
+					// Find the parent page in the database (if it already exists) based on
+					const [parentPage] = await db.select().from(pages).where(eq(pages.path, embeddingSource.parentPath)).limit(1).execute()
 
 					// Insert or update the page record
 					// prettier-ignore
 					const [page] = await db.insert(pages).values({ id: randomUUID(), checksum: null, path: embeddingSource.path, meta: JSON.stringify(meta), parent_page_id: parentPage?.id || null, version: refreshVersion, last_refresh: refreshDate } as InsertPage).returning().execute()
+
+					// Log the page and its sections
 					console.log(`[${embeddingSource.path}] Generating embeddings for ${sections.length} sections`)
 
 					// Generate embeddings for each section
 					for (const section of sections) {
-						// > Destructure the section data
-						const { slug, heading, content } = section
-
 						// > Replace newlines by spaces for better embedding results
-						const input = content.replace(/\n/g, " ")
+						const input = section.content.replace(/\n/g, " ")
 
 						// Generate embeddings for the section
 						try {
-							const embeddingResponse = await openai.createEmbedding({ model: embeddingsModel, input })
-							if (embeddingResponse.status !== 200) throw new Error(inspect(embeddingResponse.data, false, 2))
-							const [responseData] = embeddingResponse.data.data
-							// prettier-ignore
-							await db.insert(pageSections).values({ id: randomUUID(), page_id: page.id, slug, heading, content, token_count: embeddingResponse.data.usage.total_tokens, embedding: responseData.embedding } as InsertPageSection).execute()
-						} catch (err) {
+							// >> Generate embeddings for the section
+							const embeddingResponse = await openai.createEmbedding({ model: embeddingsModel, input: input })
+							if (embeddingResponse.status !== 200) throw new Error(inspect(embeddingResponse, false, 2))
+							const total_tokens = embeddingResponse.data.usage
+							const { embedding } = embeddingResponse.data.data[0]
+
+							// >> Insert the section record
+							const newSection = {
+								id: randomUUID(),
+								slug: section.slug,
+								heading: section.heading,
+								content: section.content,
+								embedding: embedding,
+								page_id: page.id,
+								token_count: total_tokens,
+								parent_path: page.path,
+							}
+
+							// >> Insert the section record into the database
+							await db.insert(pageSections).values(newSection).execute()
+						} catch (error) {
+							// If the embedding generation fails, log an error and continue
 							console.error(`Failed to generate embeddings for section starting with '${input.slice(0, 40)}'`)
-							throw err
+							throw error
 						}
 					}
 
 					// Update the page record with the correct checksum after successful embedding
 					// prettier-ignore
-					await db.update(pages).set({ checksum } as SelectPage).where(eq(pages.id, page.id)).execute()
+					await db.update(pages).set({ checksum: checksum } as SelectPage).where(eq(pages.id, page.id)).execute()
 				} else {
 					// If the page has not changed, skip the page and log a message
 					console.log(`[${embeddingSource.path}] No changes detected, skipping.`)
