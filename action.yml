@@ -9,12 +9,12 @@ branding:
   color: "red"
 
 # ENVIRONMENTAL VALUES
-env:
-  DATABASE_URL: ${{ secrets.DATABASE_URL }}
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  DOCS_ROOT_PATH: ${{ secrets.DOCS_ROOT_PATH }}
-  # DOCS_FULL_PATH: ${{ github.workspace }}/${{ secrets.DOCS_ROOT_PATH }}
-  directory: ${{ github.workspace }}/docs
+# env:
+#   DATABASE_URL: ${{ secrets.DATABASE_URL }}
+#   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+#   DOCS_ROOT_PATH: ${{ secrets.DOCS_ROOT_PATH }}
+#   # DOCS_FULL_PATH: ${{ github.workspace }}/${{ secrets.DOCS_ROOT_PATH }}
+#   directory: ${{ github.workspace }}/docs
 
 # INPUT VALUES
 inputs:
