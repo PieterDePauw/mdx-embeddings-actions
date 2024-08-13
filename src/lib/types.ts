@@ -32,3 +32,6 @@ export type GenerateEmbeddingsProps = {
 	docsRootPath: string
 	databaseUrl: string
 }
+
+// WalkResultType type
+export type WalkResultType = Promise<{ path: string; parentPath?: string }[]>

@@ -7,12 +7,14 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { pages, pageSections, type InsertPageSection, type InsertPage } from "./db/schema"
 import { createMarkdownSource, loadMarkdownSource } from "./markdown"
 import { walk } from "./walk"
+import { embeddingsModel, ignoredFiles, defaultDocsRootPath } from "./lib/constants"
 import { type GenerateEmbeddingsProps, type SourceData } from "./lib/types"
 
-// Constants
-const embeddingsModel = "text-embedding-ada-002"
-const ignoredFiles = ["pages/404.mdx"]
-const defaultDocsRootPath = "./docs"
+// Helper function to generate embeddings for all pages
+async function generateEmbeddingSources(docsRootPath: string): Promise<SourceData[]> {
+	const docs = await walk(docsRootPath)
+	return docs.filter(({ path }) => !ignoredFiles.includes(path) && /\.mdx?$/.test(path)).map((entry) => createMarkdownSource("markdown", entry.path, entry.parentPath))
+}
 
 // Generate embeddings for all pages
 export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, docsRootPath = defaultDocsRootPath, databaseUrl }: GenerateEmbeddingsProps): Promise<void> {
@@ -26,10 +28,13 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefresh = false, 
 	const refreshDate = new Date()
 
 	// Find all the markdown files in the docs directory
-	const embeddingSources: SourceData[] = (await walk(docsRootPath))
-		.filter(({ path }) => /\.mdx?$/.test(path))
-		.filter(({ path }) => !ignoredFiles.includes(path))
-		.map((entry) => createMarkdownSource("markdown", entry.path, entry.parentPath))
+	// const embeddingSources: SourceData[] = (await walk(docsRootPath))
+	// 	.filter(({ path }) => /\.mdx?$/.test(path))
+	// 	.filter(({ path }) => !ignoredFiles.includes(path))
+	// 	.map((entry) => createMarkdownSource("markdown", entry.path, entry.parentPath))
+
+	// Find all the markdown files in the docs directory
+	const embeddingSources = await generateEmbeddingSources(docsRootPath)
 
 	// Log that the process is starting
 	console.log(`Discovered ${embeddingSources.length} pages`)

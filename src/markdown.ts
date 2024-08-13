@@ -162,12 +162,12 @@ export function parseHeading(input: string): { heading: string; customAnchor?: s
 }
 
 // Create a new slug from a string input (such as a heading)
-export function generateSlug(input: string): string {
-	// > Create a new slugger
-	const slugger = new GithubSlugger()
-	// > Generate a slug from the input
-	return slugger.slug(input)
-}
+// export function generateSlug(input: string): string {
+// 	// > Create a new slugger
+// 	const slugger = new GithubSlugger()
+// 	// > Generate a slug from the input
+// 	return slugger.slug(input)
+// }
 
 // Create a markdown source
 export function createMarkdownSource(source: string, filePath: string, parentFilePath?: string): SourceData {
@@ -201,11 +201,7 @@ export async function loadMarkdownSource(sourceData: SourceData): Promise<Proces
 
 	// > If the tree is empty, return an empty object
 	if (!mdTree) {
-		return {
-			checksum: checksum,
-			meta: serializableMeta,
-			sections: [],
-		}
+		return { checksum: checksum, meta: serializableMeta, sections: [] }
 	}
 
 	// > Split the tree by headings
@@ -215,36 +211,30 @@ export async function loadMarkdownSource(sourceData: SourceData): Promise<Proces
 	const slugger = new GithubSlugger()
 
 	// > Map the section trees to create sections
-	const sections = sectionTrees.map((tree) => {
-		// > Check if the first node is a heading
-		const firstNode = tree.children[0]
+	const sections = sectionTrees.map((sectionTree) => {
+		// >> Check if the first node is a heading
+		const firstNode = sectionTree.children[0]
 		const isFirstNodeHeading = firstNode.type === "heading"
 
-		// > If the first node is not a heading, return the content
-		if (!isFirstNodeHeading) {
-			return {
-				content: toMarkdown(tree),
-			}
+		// >> Convert the section tree to markdown
+		const content = toMarkdown(sectionTree)
+
+		// >> If the first node is a heading, parse the heading and custom anchor
+		if (isFirstNodeHeading) {
+			// >>> Parse the heading and custom anchor
+			const { heading, customAnchor } = parseHeading(toString(firstNode))
+
+			// >>> Create a slug from the heading or custom anchor
+			const slug = slugger.slug(customAnchor ?? heading)
+
+			// >>> Return the content, heading and slug
+			return { content: content, heading: heading, slug: slug }
 		}
 
-		// > Parse the heading and custom anchor
-		const { heading, customAnchor } = parseHeading(toString(firstNode))
-
-		// > Create a slug from the heading or custom anchor
-		const slug = slugger.slug(customAnchor ?? heading)
-
-		// > Return the content, heading and slug
-		return {
-			content: toMarkdown(tree),
-			heading: heading,
-			slug: slug,
-		}
+		// >> If the first node is not a heading, return the content
+		return { content: content, heading: undefined, slug: undefined }
 	})
 
 	// > Return the checksum, serializable meta and sections
-	return {
-		checksum: checksum,
-		meta: serializableMeta,
-		sections: sections,
-	}
+	return { checksum: checksum, meta: serializableMeta, sections: sections }
 }

@@ -1,9 +1,10 @@
 // Import modules
 import { readdir, stat } from "fs/promises"
 import { basename, join } from "path"
+import { type WalkResultType } from "./lib/types"
 
 // Walk the directory and return the paths
-export async function walk(directory: string, parentPath?: string): Promise<{ path: string; parentPath?: string }[]> {
+export async function walk(directory: string, parentPath?: string): WalkResultType {
 	// > Read the directory contents
 	const immediateFiles = await readdir(directory)
 	// > Recursively walk the directory
