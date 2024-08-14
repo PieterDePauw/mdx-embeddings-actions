@@ -2,10 +2,10 @@ import { createPool } from "@vercel/postgres"
 import { Configuration, OpenAIApi } from "openai"
 import { randomUUID } from "crypto"
 import { inspect } from "util"
-import { eq, ne, sql } from "drizzle-orm"
+import { eq, ne } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/vercel-postgres"
 import { pages, pageSections, type InsertPage, type SelectPage } from "./db/schema"
-import { createMarkdownSource, loadMarkdownSource } from "./markdown"
+import { parsePaths, loadMarkdownSource } from "./markdown"
 import { walk } from "./walk"
 
 // Constants
@@ -20,11 +20,17 @@ export type GenerateEmbeddingsProps = {
 	databaseUrl: string
 }
 
+// Helper function to set up OpenAI API configuration
+export function setupOpenAI(apiKey: string) {
+	const configuration = new Configuration({ apiKey })
+	return new OpenAIApi(configuration)
+}
+
 // Helper function to generate embeddings for all pages
 async function generateDocs(docsRootPath: string) {
 	const foundDocs = await walk(docsRootPath)
 	const markdownFiles = foundDocs.filter(({ path }) => !ignoredFiles.includes(path) && /\.mdx?$/.test(path))
-	return markdownFiles.map((entry) => createMarkdownSource(entry.path, entry.parentPath))
+	return markdownFiles.map((entry) => parsePaths(entry.path, entry.parentPath))
 }
 
 // Generate embeddings for all pages
@@ -34,64 +40,61 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages =
 	const db = drizzle(pool)
 
 	// Set up OpenAI API configuration
-	const configuration = new Configuration({ apiKey: openaiApiKey })
-	const openai = new OpenAIApi(configuration)
+	const openai = setupOpenAI(openaiApiKey)
 
 	// Generate a unique version ID for this run
 	const refreshVersion = randomUUID()
 	const refreshDate = new Date()
 
 	try {
-		// Step 0: Connect to the database
-		await db.execute(sql`SELECT NOW()`)
-		console.log("Successfully connected to the database")
-
 		// Step 1: Identify all markdown files that need embeddings
-		const embeddingSources = await generateDocs(docsRootPath)
-		console.log(`Discovered ${embeddingSources.length} pages`)
+		const documents = await generateDocs(docsRootPath)
 
-		// Step 2: Process each markdown file
-		for (const embeddingSource of embeddingSources) {
+		// Step 1.5: Log the number of pages discovered
+		console.log(`Discovered ${documents.length} pages`)
+
+		// Step 2: Check if we need to refresh all pages
+		if (shouldRefreshAllPages) {
+			console.log("Refreshing all pages")
+			await db.delete(pages).execute()
+			await db.delete(pageSections).execute()
+		}
+
+		// Step 3: Process each markdown file
+		for (const document of documents) {
 			try {
-				// Load markdown file content and metadata
-				const { checksum, meta, sections } = await loadMarkdownSource(embeddingSource)
+				// 2a: Load markdown file content and metadata
+				const { checksum, meta, sections } = await loadMarkdownSource(document)
 
-				// Find the page in the database (if it already exists) based on its path
+				// 2b: Check if the page already exists in the database based on the path
 				const [existingPage] = await db
 					.select({ id: pages.id, path: pages.path, checksum: pages.checksum, parent_page: { id: pages.id, path: pages.path } })
 					.from(pages)
-					.where(eq(pages.path, embeddingSource.path))
+					.where(eq(pages.path, document.path))
 					.limit(1)
 					.execute()
 
-				// Determine if we should refresh all pages, or if the page has changed
+				// 2c: Compare the checksum of the existing page with the new checksum to determine if the page has changed
 				const shouldRefreshExistingPage = !existingPage || existingPage.checksum !== checksum
 
-				// If we should refresh all pages, or if the page has changed, we need to regenerate the embeddings
-				if (shouldRefreshAllPages || shouldRefreshExistingPage) {
-					// > If we are refreshing all pages, remove the old sections for the existing page
-					if (shouldRefreshAllPages) {
-						// prettier-ignore
-						await db.delete(pageSections).where(eq(pageSections.page_id, existingPage?.id || "")).execute()
-						console.log(`[${embeddingSource.path}] Refreshing page, removing old sections`)
-					}
-
+				// 2d: Determine if we should refresh the page based on the refresh strategy
+				if (shouldRefreshExistingPage) {
 					// > If we are refreshing only the changed pages, remove the old sections for the existing page
 					if (existingPage && shouldRefreshExistingPage) {
 						// prettier-ignore
 						await db.delete(pageSections).where(eq(pageSections.page_id, existingPage.id)).execute()
-						console.log(`[${embeddingSource.path}] Updating changed page, removing old sections`)
+						console.log(`[${document.path}] Updating changed page, removing old sections`)
 					}
 
 					// Find the parent page in the database (if it already exists) based on
-					const [parentPage] = await db.select().from(pages).where(eq(pages.path, embeddingSource.parentPath)).limit(1).execute()
+					const [parentPage] = await db.select().from(pages).where(eq(pages.path, document.parentPath)).limit(1).execute()
 
 					// Insert or update the page record
 					// prettier-ignore
-					const [page] = await db.insert(pages).values({ id: randomUUID(), checksum: null, path: embeddingSource.path, meta: JSON.stringify(meta), parent_page_id: parentPage?.id || null, version: refreshVersion, last_refresh: refreshDate } as InsertPage).returning().execute()
+					const [page] = await db.insert(pages).values({ id: randomUUID(), checksum: null, path: document.path, meta: JSON.stringify(meta), parent_page_id: parentPage?.id || null, version: refreshVersion, last_refresh: refreshDate } as InsertPage).returning().execute()
 
 					// Log the page and its sections
-					console.log(`[${embeddingSource.path}] Generating embeddings for ${sections.length} sections`)
+					console.log(`[${document.path}] Generating embeddings for ${sections.length} sections`)
 
 					// Generate embeddings for each section
 					for (const section of sections) {
@@ -132,12 +135,12 @@ export async function generateEmbeddings({ openaiApiKey, shouldRefreshAllPages =
 					await db.update(pages).set({ checksum: checksum } as SelectPage).where(eq(pages.id, page.id)).execute()
 				} else {
 					// If the page has not changed, skip the page and log a message
-					console.log(`[${embeddingSource.path}] No changes detected, skipping.`)
+					console.log(`[${document.path}] No changes detected, skipping.`)
 					// prettier-ignore
 					await db.update(pages).set({ meta: JSON.stringify(meta), version: refreshVersion, last_refresh: refreshDate } as Omit<InsertPage, "id">).where(eq(pages.id, existingPage[0].id)).execute()
 				}
 			} catch (err) {
-				console.error(`Failed to process embedding source '${embeddingSource.path}'`)
+				console.error(`Failed to process embedding source '${document.path}'`)
 				console.error(err)
 			}
 		}
