@@ -5,23 +5,23 @@ author: "PieterDePauw"
 
 # GITHUB BRANDING
 branding:
-  icon: "heart"
-  color: "red"
+    icon: "heart"
+    color: "red"
 
 # INPUT VALUES
 inputs:
-  OPENAI_API_KEY:
-    description: "OpenAI API Key"
-    required: true
-  DATABASE_URL:
-    description: "Database URL"
-    required: true
-  DOCS_ROOT_PATH:
-    description: "Path to the documentation directory"
-    required: true
-    default: "docs"
+    postgres-connection-string:
+        required: true
+        description: "Your PostgreSQL connection string"
+    openai-key:
+        required: true
+        description: "Your OpenAI API key"
+    docs-root-path:
+        required: true
+        description: "The path to the root of your knowledge base or docs folder"
+        default: "docs"
 
 # RUNTIME CONFIGURATION
 runs:
-  using: "node20"
-  main: "dist/index.js"
+    using: "node20"
+    main: "dist/index.js"
