@@ -49,7 +49,7 @@
 		"mdast-util-to-markdown": "^1.5.0",
 		"mdast-util-to-string": "^3.2.0",
 		"micromark-extension-mdxjs": "^1.0.1",
-		"openai": "^3.2.1",
+		"openai": "^4.67.0",
 		"pg": "^8.12.0",
 		"picocolors": "^1.0.1",
 		"postgres": "^3.4.4",
